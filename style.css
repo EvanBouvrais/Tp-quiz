@@ -1,0 +1,7 @@
+.index-main-bg {
+    background-color: #172630;
+    background-image: url("images/index-main-bg.svg");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+}
