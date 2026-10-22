@@ -6,16 +6,21 @@
     $username = $_SESSION["username"] ?? "";
 
     try {
-        $query = $mysqlClient->query(
-            "SELECT quiz_id, title, description
+        $query = $mysqlClient->prepare(
+            "SELECT q.quiz_id, q.title, q.description, MAX(qs.score) AS max_score
              FROM quizzes AS q
+             LEFT JOIN quiz_scores AS qs
+                ON qs.quiz_id = q.quiz_id
+                AND qs.user_id = :user_id
              WHERE EXISTS (
                  SELECT 1
                  FROM questions
                  WHERE questions.quiz_id = q.quiz_id
              )
+             GROUP BY q.quiz_id, q.title, q.description
              ORDER BY q.quiz_id"
         );
+        $query->execute(["user_id" => $_SESSION["user_id"] ?? 0]);
         $quizzes = $query->fetchAll();
     } catch (PDOException $exception) {
         error_log("Impossible de charger les quiz : " . $exception->getMessage());
@@ -96,7 +101,10 @@
                     <p class="text-sm"><?= htmlspecialchars($quiz["description"], ENT_QUOTES, 'UTF-8') ?></p>
                 </div>
 
-                <p class="self-end text-sm">Jouer</p>
+                <p class="self-end text-sm">
+                    Meilleur score :
+                    <?= $quiz["max_score"] !== null ? (int) $quiz["max_score"] : "—" ?>
+                </p>
             </a>
         <?php endforeach; ?>
 
