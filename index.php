@@ -1,30 +1,32 @@
 <?php
     session_start();
+    require_once("connexion.php");
 
     $isConnected = isset($_SESSION["user_id"]);
     $username = $_SESSION["username"] ?? "";
 
-    require_once __DIR__ . "/db.php";
-
-    $query = $mysqlClient->prepare(
-        "SELECT
-            q.quiz_id,
-            q.title,
-            q.description,
-            MAX(qs.score) AS max_score
-        FROM quizzes q
-        LEFT JOIN quiz_scores qs
-            ON q.quiz_id = qs.quiz_id
-            AND qs.user_id = :user_id
-        GROUP BY q.quiz_id, q.title, q.description
-        ORDER BY q.quiz_id ASC"
-    );
-
-    $query->execute([
-        "user_id" => $_SESSION["user_id"] ?? 0
-    ]);
-
-    $quizzes = $query->fetchAll();
+    try {
+        $query = $mysqlClient->prepare(
+            "SELECT q.quiz_id, q.title, q.description, MAX(qs.score) AS max_score
+             FROM quizzes AS q
+             LEFT JOIN quiz_scores AS qs
+                ON qs.quiz_id = q.quiz_id
+                AND qs.user_id = :user_id
+             WHERE EXISTS (
+                 SELECT 1
+                 FROM questions
+                 WHERE questions.quiz_id = q.quiz_id
+             )
+             GROUP BY q.quiz_id, q.title, q.description
+             ORDER BY q.quiz_id"
+        );
+        $query->execute(["user_id" => $_SESSION["user_id"] ?? 0]);
+        $quizzes = $query->fetchAll();
+    } catch (PDOException $exception) {
+        error_log("Impossible de charger les quiz : " . $exception->getMessage());
+        http_response_code(500);
+        exit("Impossible de charger les quiz depuis la base de données.");
+    }
 ?>
 
 <!DOCTYPE html>
@@ -89,32 +91,26 @@
     <main class="flex flex-col gap-3 px-15 pt-20">
 
         <?php foreach ($quizzes as $quiz): ?>
+            <a
+                href="quiz.php?id=<?= (int) $quiz["quiz_id"] ?>&new=1"
+                onclick="return accederAuQuiz(event, <?= (int) $quiz["quiz_id"] ?>)"
+                class="quiz-link flex h-30 items-center justify-between rounded-2xl bg-linear-to-b from-blue-400 via-blue-700 to-blue-900 px-4 py-3 text-white"
+            >
+                <div>
+                    <p class="text-2xl"><?= htmlspecialchars($quiz["title"], ENT_QUOTES, 'UTF-8') ?></p>
+                    <p class="text-sm"><?= htmlspecialchars($quiz["description"], ENT_QUOTES, 'UTF-8') ?></p>
+                </div>
 
-            <a href="quiz.php?id=<?= (int) $quiz['quiz_id'] ?>" class="block rounded-2xl transition hover:brightness-110">
-                <article class="flex h-30 items-center justify-between rounded-2xl bg-linear-to-b from-blue-400 via-blue-700 to-blue-900 px-4 py-3 text-white">
-
-                    <div>
-                        <h2>
-                            <?= htmlspecialchars($quiz['title'], ENT_QUOTES, 'UTF-8') ?>
-                        </h2>
-
-                        <p>
-                            <?= htmlspecialchars($quiz['description'], ENT_QUOTES, 'UTF-8') ?>
-                        </p>
-                    </div>
-
-                    <p class="self-end text-sm">
-                        Max score :
-                        <?= $quiz['max_score'] !== null
-                            ? (int) $quiz['max_score']
-                            : '—' ?>
-                    </p>
-
-                </article>
+                <p class="self-end text-sm">
+                    Meilleur score :
+                    <?= $quiz["max_score"] !== null ? (int) $quiz["max_score"] : "—" ?>
+                </p>
             </a>
-
         <?php endforeach; ?>
 
+        <?php if ($quizzes === []): ?>
+            <p class="rounded-lg bg-white p-4">Aucun quiz n’est disponible pour le moment.</p>
+        <?php endif; ?>
     </main>
 
     <!-- Fenêtre de connexion -->
@@ -158,6 +154,18 @@
 
 
     <script>
+        const utilisateurConnecte = <?= $isConnected ? 'true' : 'false' ?>;
+
+        function accederAuQuiz(event, quizId) {
+            if (utilisateurConnecte) {
+                return true;
+            }
+
+            event.preventDefault();
+            openConnexion(quizId);
+            return false;
+        }
+
         function openConnexion(quizId = '') {
             const fenetre = document.getElementById('fenetreConnexion');
 
