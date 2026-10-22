@@ -14,7 +14,7 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
 $username = trim($_POST["username"] ?? "");
 
 // Vérifier que le pseudonyme est valide
-if ($username === "" || strlen($username) > 50) {
+if ($username === "" || strlen($username) > 30) {
     header("Location: index.php");
     exit;
 }
