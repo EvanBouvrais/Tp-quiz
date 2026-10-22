@@ -2,7 +2,7 @@
 
 session_start();
 
-require_once("connexion.php");
+require_once __DIR__ . "/db.php";
 
 // Vérifier que le formulaire a été envoyé
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
@@ -22,10 +22,10 @@ if ($username === "" || strlen($username) > 50) {
 try {
     // Rechercher un utilisateur ayant ce pseudonyme
     $query = $mysqlClient->prepare(
-        "SELECT user_id, user_name
-         FROM users
-         WHERE user_name = :username"
-    );
+    "SELECT user_id, username
+     FROM users
+     WHERE username = :username"
+);
 
     $query->execute([
         "username" => $username
@@ -36,8 +36,8 @@ try {
     // Si le pseudonyme n'existe pas, créer un utilisateur
     if (!$user) {
         $query = $mysqlClient->prepare(
-            "INSERT INTO users (user_name)
-             VALUES (:username)"
+            "INSERT INTO users (username)
+            VALUES (:username)"
         );
 
         $query->execute([
@@ -64,6 +64,12 @@ try {
     exit;
 
 } catch (PDOException $e) {
+    error_log($e->getMessage());
+
     http_response_code(500);
-    exit("Une erreur est survenue lors de la connexion.");
+    exit("Erreur SQL : " . htmlspecialchars(
+        $e->getMessage(),
+        ENT_QUOTES,
+        'UTF-8'
+    ));
 }

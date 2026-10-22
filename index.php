@@ -4,6 +4,27 @@
     $isConnected = isset($_SESSION["user_id"]);
     $username = $_SESSION["username"] ?? "";
 
+    require_once __DIR__ . "/db.php";
+
+    $query = $mysqlClient->prepare(
+        "SELECT
+            q.quiz_id,
+            q.title,
+            q.description,
+            MAX(qs.score) AS max_score
+        FROM quizzes q
+        LEFT JOIN quiz_scores qs
+            ON q.quiz_id = qs.quiz_id
+            AND qs.user_id = :user_id
+        GROUP BY q.quiz_id, q.title, q.description
+        ORDER BY q.quiz_id ASC"
+    );
+
+    $query->execute([
+        "user_id" => $_SESSION["user_id"] ?? 0
+    ]);
+
+    $quizzes = $query->fetchAll();
 ?>
 
 <!DOCTYPE html>
@@ -67,17 +88,33 @@
     <!-- Liste des quiz -->
     <main class="flex flex-col gap-3 px-15 pt-20">
 
-        <!-- Quiz 1 -->
-        <article class="flex h-30 items-center justify-between rounded-2xl bg-linear-to-b from-blue-400 via-blue-700 to-blue-900 px-4 py-3 text-white">
+        <?php foreach ($quizzes as $quiz): ?>
 
-            <div>
-                <p class="text-2xl">Quiz n°</p>
-                <p class="text-3xl">[]</p>
-            </div>
+            <a href="quiz.php?id=<?= (int) $quiz['quiz_id'] ?>" class="block rounded-2xl transition hover:brightness-110">
+                <article class="flex h-30 items-center justify-between rounded-2xl bg-linear-to-b from-blue-400 via-blue-700 to-blue-900 px-4 py-3 text-white">
 
-            <p class="self-end text-sm">Max score :</p>
+                    <div>
+                        <h2>
+                            <?= htmlspecialchars($quiz['title'], ENT_QUOTES, 'UTF-8') ?>
+                        </h2>
 
-        </article>
+                        <p>
+                            <?= htmlspecialchars($quiz['description'], ENT_QUOTES, 'UTF-8') ?>
+                        </p>
+                    </div>
+
+                    <p class="self-end text-sm">
+                        Max score :
+                        <?= $quiz['max_score'] !== null
+                            ? (int) $quiz['max_score']
+                            : '—' ?>
+                    </p>
+
+                </article>
+            </a>
+
+        <?php endforeach; ?>
+
     </main>
 
     <!-- Fenêtre de connexion -->
