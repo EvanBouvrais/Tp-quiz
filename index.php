@@ -143,7 +143,7 @@
                     Pseudonyme
                 </label>
 
-                <input type="text" id="username" name="username" maxlength="50" required autocomplete="nickname" placeholder="Ton pseudonyme" class="mb-4 w-full rounded-md border border-[#2577D9] bg-[#151D28] p-2 text-white">
+                <input type="text" id="username" name="username" maxlength="30" required autocomplete="nickname" placeholder="Ton pseudonyme" class="mb-4 w-full rounded-md border border-[#2577D9] bg-[#151D28] p-2 text-white">
 
                 <!-- Quiz sélectionné, s'il y en a un -->
                 <input type="hidden" id="quiz_id" name="quiz_id" value="" >

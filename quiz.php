@@ -2,49 +2,125 @@
 <?php
 session_start();
 
+if (!isset($_SESSION["user_id"])) {
+    header("Location: index.php");
+    exit;
+}
+
 // Questions du quiz
-$questions = [
-    [
-        "question" => "Dans la partie 3 de JoJo's bizare adventure, les noms des stands sont lié a quoi ?",
-        "reponses" => ["Au cartes de tarots", "A différent titre de musique", "Au manieur qui décide du nom", "A la force mental du manieur"],
-        "correcte" => 0
-    ],
-    [
-        "question" => "Qui est l'ennemi intemporel de la famille Joestar ?",
-        "reponses" => ["Yoshikage Kira", "Dio Brando", "La fondation Speedwagon", "Diavolo"],
-        "correcte" => 1
-    ],
-    [
-        "question" => "Quels est le nom de la capacité utiliser dans les premières parties ?",
-        "reponses" => ["La respiration", "Les stands", "L'intelligence", "L'onde"],
-        "correcte" => 3
-    ],
-    [
-        "question" => "Qui est le célébre mangaka vivant a Morioh ?",
-        "reponses" => ["Jean-Pierre Polnareff", "Rohan Kishibe", "kakyoin Noriaki", "César Zeppeli"],
-        "correcte" => 1
-    ],
-    [
-        "question" => "Comment s'appel le stand de Jean-Pierre Polnareff ?",
-        "reponses" => ["Silver Chariot", "Star Platinum", "Killer Queen", "Golden Experience"],
-        "correcte" => 0
-    ]
-];
+
+require_once __DIR__ . "/db.php";
+
+// Vérifier que l'identifiant reçu est un entier valide
+$quizId = filter_input(INPUT_GET, "id", FILTER_VALIDATE_INT);
+
+if ($quizId === false || $quizId === null || $quizId <= 0) {
+    http_response_code(400);
+    exit("Identifiant de quiz invalide.");
+}
+
+// Récupérer les informations du quiz
+$query = $mysqlClient->prepare(
+    "SELECT quiz_id, title, description
+     FROM quizzes
+     WHERE quiz_id = :quiz_id"
+);
+
+$query->execute([
+    "quiz_id" => $quizId
+]);
+
+$quiz = $query->fetch();
+
+if (!$quiz) {
+    http_response_code(404);
+    exit("Ce quiz n'existe pas.");
+}
+
+// Récupérer les questions du quiz
+$query = $mysqlClient->prepare(
+    "SELECT question_id, question_text, points, question_order
+     FROM questions
+     WHERE quiz_id = :quiz_id
+     ORDER BY question_order ASC"
+);
+
+$query->execute([
+    "quiz_id" => $quizId
+]);
+
+$questions = $query->fetchAll();
+
+// Récupérer les réponses de chaque question
+$queryReponses = $mysqlClient->prepare(
+    "SELECT option_id, option_text, is_correct
+     FROM answer_options
+     WHERE question_id = :question_id
+     ORDER BY option_id ASC"
+);
+
+foreach ($questions as &$question) {
+    $queryReponses->execute([
+        "question_id" => $question["question_id"]
+    ]);
+
+    $question["reponses"] = $queryReponses->fetchAll();
+}
+
+unset($question);
+
+/////////////////////////////////////////////////////////////////////////////////////
+
 
 function creerOrdresAleatoires(array $questions): array
 {
+    // Mélanger les indices des questions récupérées depuis SQL
     $ordreQuestions = array_keys($questions);
     shuffle($ordreQuestions);
 
+    // Mélanger les indices des réponses de chaque question
     $ordreReponses = [];
 
-    foreach ($questions as $questionId => $question) {
-        $ordreReponses[$questionId] = array_keys($question["reponses"]);
-        shuffle($ordreReponses[$questionId]);
+    foreach ($questions as $indexQuestion => $question) {
+        $ordreReponses[$indexQuestion] = array_keys(
+            $question["reponses"]
+        );
+
+        shuffle($ordreReponses[$indexQuestion]);
     }
 
     return [$ordreQuestions, $ordreReponses];
 }
+
+
+require_once __DIR__ . "/db.php";
+
+// Vérifier que l'identifiant reçu est un entier valide
+$quizId = filter_input(INPUT_GET, "id", FILTER_VALIDATE_INT);
+
+if ($quizId === false || $quizId === null || $quizId <= 0) {
+    http_response_code(400);
+    exit("Identifiant de quiz invalide.");
+}
+
+// Récupérer les informations du quiz correspondant
+$query = $mysqlClient->prepare(
+    "SELECT quiz_id, title, description
+     FROM quizzes
+     WHERE quiz_id = :quiz_id"
+);
+
+$query->execute([
+    "quiz_id" => $quizId
+]);
+
+$quiz = $query->fetch();
+
+if (!$quiz) {
+    http_response_code(404);
+    exit("Ce quiz n'existe pas.");
+}
+
 
 // Initialisation du quiz
 if (
@@ -68,23 +144,31 @@ if (isset($_POST["restart"])) {
     [$_SESSION["ordre_questions"], $_SESSION["ordre_reponses"]] = creerOrdresAleatoires($questions);
 }
 
-// Vérifier la réponse et passer à la question suivante
-if (isset($_POST["suivant"])) {
-    $index = $_SESSION["question"];
-    $questionId = $_SESSION["ordre_questions"][$index] ?? null;
-    $reponse = filter_var($_POST["reponse"] ?? null, FILTER_VALIDATE_INT);
+    // Vérifier la réponse et passer à la question suivante
+    if (isset($_POST["suivant"])) {
+        $index = $_SESSION["question"];
+        $indexQuestion = $_SESSION["ordre_questions"][$index] ?? null;
+        $optionId = filter_input(INPUT_POST, "reponse", FILTER_VALIDATE_INT);
 
-    if (
-        $reponse !== false
-        && isset($questions[$questionId]["reponses"][$reponse])
-    ) {
-        if ($reponse === $questions[$questionId]["correcte"]) {
-            $_SESSION["score"]++;
+        if (
+            $indexQuestion !== null
+            && isset($questions[$indexQuestion])
+            && $optionId !== false
+            && $optionId !== null
+        ) {
+            foreach ($questions[$indexQuestion]["reponses"] as $reponse) {
+                if ((int) $reponse["option_id"] === $optionId) {
+                    if ((int) $reponse["is_correct"] === 1) {
+                        $_SESSION["score"] += (int) $questions[$indexQuestion]["points"];
+                    }
+
+                    break;
+                }
+            }
         }
-    }
 
-    $_SESSION["question"]++;
-}
+        $_SESSION["question"]++;
+    }
 
 $index = $_SESSION["question"];
 $total = count($questions);
@@ -266,7 +350,11 @@ $questionId = $_SESSION["ordre_questions"][$index] ?? null;
             </div>
 
             <div class="question">
-                <?= htmlspecialchars($questions[$questionId]["question"]) ?>
+                <?= htmlspecialchars(
+                    $questions[$questionId]["question_text"],
+                    ENT_QUOTES,
+                    'UTF-8'
+                ) ?>
             </div>
 
             <form method="POST" id="quizForm">
@@ -279,11 +367,15 @@ $questionId = $_SESSION["ordre_questions"][$index] ?? null;
                             <input
                                 type="radio"
                                 name="reponse"
-                                value="<?= $reponseIndex ?>"
+                                value="<?= (int) $questions[$questionId]["reponses"][$reponseIndex]["option_id"] ?>"
                                 required
                             >
                             <span>
-                                <?= htmlspecialchars($questions[$questionId]["reponses"][$reponseIndex]) ?>
+                                <?= htmlspecialchars(
+                                    $questions[$questionId]["reponses"][$reponseIndex]["option_text"],
+                                    ENT_QUOTES,
+                                    'UTF-8'
+                                ) ?>
                             </span>
                         </label>
 
@@ -351,33 +443,3 @@ $questionId = $_SESSION["ordre_questions"][$index] ?? null;
 </div>
 </body>
 </html>
-<?php
-session_start();
-require_once __DIR__ . "/db.php";
-
-// Vérifier que l'identifiant reçu est un entier valide
-$quizId = filter_input(INPUT_GET, "id", FILTER_VALIDATE_INT);
-
-if ($quizId === false || $quizId === null || $quizId <= 0) {
-    http_response_code(400);
-    exit("Identifiant de quiz invalide.");
-}
-
-// Récupérer les informations du quiz correspondant
-$query = $mysqlClient->prepare(
-    "SELECT quiz_id, title, description
-     FROM quizzes
-     WHERE quiz_id = :quiz_id"
-);
-
-$query->execute([
-    "quiz_id" => $quizId
-]);
-
-$quiz = $query->fetch();
-
-if (!$quiz) {
-    http_response_code(404);
-    exit("Ce quiz n'existe pas.");
-}
-?>
