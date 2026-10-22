@@ -1,9 +1,27 @@
 <?php
     session_start();
+    require_once("connexion.php");
 
     $isConnected = isset($_SESSION["user_id"]);
     $username = $_SESSION["username"] ?? "";
 
+    try {
+        $query = $mysqlClient->query(
+            "SELECT quiz_id, title, description
+             FROM quizzes AS q
+             WHERE EXISTS (
+                 SELECT 1
+                 FROM questions
+                 WHERE questions.quiz_id = q.quiz_id
+             )
+             ORDER BY q.quiz_id"
+        );
+        $quizzes = $query->fetchAll();
+    } catch (PDOException $exception) {
+        error_log("Impossible de charger les quiz : " . $exception->getMessage());
+        http_response_code(500);
+        exit("Impossible de charger les quiz depuis la base de données.");
+    }
 ?>
 
 <!DOCTYPE html>
@@ -67,17 +85,24 @@
     <!-- Liste des quiz -->
     <main class="flex flex-col gap-3 px-15 pt-20">
 
-        <!-- Quiz 1 -->
-        <a href="quiz.php" class="quiz-link flex h-30 items-center justify-between rounded-2xl bg-linear-to-b from-blue-400 via-blue-700 to-blue-900 px-4 py-3 text-white">
+        <?php foreach ($quizzes as $quiz): ?>
+            <a
+                href="quiz.php?id=<?= (int) $quiz["quiz_id"] ?>&new=1"
+                onclick="return accederAuQuiz(event, <?= (int) $quiz["quiz_id"] ?>)"
+                class="quiz-link flex h-30 items-center justify-between rounded-2xl bg-linear-to-b from-blue-400 via-blue-700 to-blue-900 px-4 py-3 text-white"
+            >
+                <div>
+                    <p class="text-2xl"><?= htmlspecialchars($quiz["title"], ENT_QUOTES, 'UTF-8') ?></p>
+                    <p class="text-sm"><?= htmlspecialchars($quiz["description"], ENT_QUOTES, 'UTF-8') ?></p>
+                </div>
 
-            <div>
-                <p class="text-2xl">Quiz n°</p>
-                <p class="text-3xl">[]</p>
-            </div>
+                <p class="self-end text-sm">Jouer</p>
+            </a>
+        <?php endforeach; ?>
 
-            <p class="self-end text-sm">Max score :</p>
-
-        </a>
+        <?php if ($quizzes === []): ?>
+            <p class="rounded-lg bg-white p-4">Aucun quiz n’est disponible pour le moment.</p>
+        <?php endif; ?>
     </main>
 
     <!-- Fenêtre de connexion -->
@@ -106,7 +131,7 @@
                     Pseudonyme
                 </label>
 
-                <input type="text" id="username" name="username" maxlength="50" required autocomplete="nickname" placeholder="Ton pseudonyme" class="mb-4 w-full rounded-md border border-[#2577D9] bg-[#151D28] p-2 text-white">
+                <input type="text" id="username" name="username" maxlength="30" required autocomplete="nickname" placeholder="Ton pseudonyme" class="mb-4 w-full rounded-md border border-[#2577D9] bg-[#151D28] p-2 text-white">
 
                 <!-- Quiz sélectionné, s'il y en a un -->
                 <input type="hidden" id="quiz_id" name="quiz_id" value="" >
@@ -121,6 +146,18 @@
 
 
     <script>
+        const utilisateurConnecte = <?= $isConnected ? 'true' : 'false' ?>;
+
+        function accederAuQuiz(event, quizId) {
+            if (utilisateurConnecte) {
+                return true;
+            }
+
+            event.preventDefault();
+            openConnexion(quizId);
+            return false;
+        }
+
         function openConnexion(quizId = '') {
             const fenetre = document.getElementById('fenetreConnexion');
 
