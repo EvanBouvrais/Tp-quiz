@@ -68,7 +68,7 @@
     <main class="flex flex-col gap-3 px-15 pt-20">
 
         <!-- Quiz 1 -->
-        <article class="flex h-30 items-center justify-between rounded-2xl bg-linear-to-b from-blue-400 via-blue-700 to-blue-900 px-4 py-3 text-white">
+        <a href="quiz.php" class="quiz-link flex h-30 items-center justify-between rounded-2xl bg-linear-to-b from-blue-400 via-blue-700 to-blue-900 px-4 py-3 text-white">
 
             <div>
                 <p class="text-2xl">Quiz n°</p>
@@ -77,7 +77,7 @@
 
             <p class="self-end text-sm">Max score :</p>
 
-        </article>
+        </a>
     </main>
 
     <!-- Fenêtre de connexion -->
