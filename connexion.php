@@ -1,7 +1,7 @@
 <?php
 
 $databaseHost = getenv("DB_HOST") ?: "127.0.0.1";
-$databaseName = getenv("DB_NAME") ?: "mini-quizz (2) (1)";
+$databaseName = getenv("DB_NAME") ?: "mini-quizz";
 $databaseUser = getenv("DB_USER") ?: "root";
 $databasePassword = getenv("DB_PASSWORD");
 

@@ -131,30 +131,47 @@ if (isset($_POST["suivant"])) {
         unset($_SESSION["reponse_selectionnee"]);
         $_SESSION["question"]++;
     }
+
 } elseif (isset($_POST["valider_reponse"])) {
     $index = $_SESSION["question"];
     $questionId = $_SESSION["ordre_questions"][$index] ?? null;
-    $reponseInput = $_POST["reponse"] ?? null;
-    $reponseId = is_scalar($reponseInput)
-        ? filter_var($reponseInput, FILTER_VALIDATE_INT)
-        : false;
+
+    $tempsEcoule = isset($_POST["temps_ecoule"]);
 
     if (
         $index < count($questions)
         && !isset($_SESSION["reponse_selectionnee"])
-        && $reponseId !== false
-        && isset($questions[$questionId]["reponses"][$reponseId])
+        && $questionId !== null
     ) {
-        $_SESSION["reponse_selectionnee"] = [
-            "question_id" => (int) $questionId,
-            "option_id" => $reponseId,
-        ];
+        if ($tempsEcoule) {
+            // Aucune réponse : la question est considérée comme incorrecte.
+            $_SESSION["reponse_selectionnee"] = [
+                "question_id" => (int) $questionId,
+                "option_id" => null,
+            ];
+        } else {
+            $reponseInput = $_POST["reponse"] ?? null;
+            $reponseId = is_scalar($reponseInput)
+                ? filter_var($reponseInput, FILTER_VALIDATE_INT)
+                : false;
 
-        if ($reponseId === $questions[$questionId]["correcte"]) {
-            $_SESSION["score"] += $questions[$questionId]["points"];
+            if (
+                $reponseId !== false
+                && isset($questions[$questionId]["reponses"][$reponseId])
+            ) {
+                $_SESSION["reponse_selectionnee"] = [
+                    "question_id" => (int) $questionId,
+                    "option_id" => $reponseId,
+                ];
+
+                if ($reponseId === $questions[$questionId]["correcte"]) {
+                    $_SESSION["score"] += $questions[$questionId]["points"];
+                }
+            }
         }
     }
 }
+
 
 $index = $_SESSION["question"];
 $nombreQuestions = count($questions);
@@ -222,6 +239,38 @@ foreach ($classementJoueurs as $position => $joueur) {
     <link href="style.css" rel="stylesheet">
 
     <style>
+        
+        .timer {
+            width: 100%;
+            max-width: 400px;
+            margin: 20px auto;
+            color: #5100b9;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .timer.temps-urgent {
+            color: #c62828;
+        }
+
+        .timer-barre-fond {
+            width: 100%;
+            height: 12px;
+            margin-top: 10px;
+            overflow: hidden;
+            background-color: #d9d9d9;
+            border-radius: 10px;
+        }
+
+        .timer-barre {
+            width: 100%;
+            height: 100%;
+            background-color: #5100b9;
+            border-radius: 10px;
+            transition: width 1s linear, background-color 0.3s;
+        }
+
         * {
             box-sizing: border-box;
         }
@@ -654,6 +703,7 @@ foreach ($classementJoueurs as $position => $joueur) {
                 Question n°<?= $index + 1 ?>/<?= $nombreQuestions ?>
             </div>
 
+            
             <div class="question">
                 <?= htmlspecialchars($questions[$questionId]["question"]) ?>
             </div>
@@ -683,7 +733,7 @@ foreach ($classementJoueurs as $position => $joueur) {
                                 type="radio"
                                 name="reponse"
                                 value="<?= $reponseIndex ?>"
-                                <?= $reponseSelectionnee !== null && (int) $reponseSelectionnee["option_id"] === $reponseIndex ? "checked" : "" ?>
+                                <?= $reponseSelectionnee !== null && $reponseSelectionnee["option_id"] !== null && (int) $reponseSelectionnee["option_id"] === $reponseIndex ? "checked" : "" ?>
                                 <?= $reponseVerrouillee ? "disabled" : "required" ?>
                                 onchange="verifierReponse(this)"
                             >
@@ -702,6 +752,17 @@ foreach ($classementJoueurs as $position => $joueur) {
                 <?php endif; ?>
 
             </form>
+
+            <?php if ($reponseSelectionnee === null): ?>
+                <div id="timer" class="timer">
+                    Temps restant : <span id="tempsRestant">30</span> s
+
+                    <div class="timer-barre-fond">
+                        <div id="timerBarre" class="timer-barre"></div>
+                    </div>
+                </div>
+            <?php endif; ?>
+
 
         <?php else: ?>
 
@@ -790,23 +851,14 @@ foreach ($classementJoueurs as $position => $joueur) {
 
 </div>
 <script>
-    function verifierReponse(reponse) {
-        const formulaire = reponse.form;
-        if (!formulaire || formulaire.dataset.reponseVerrouillee === "true") {
-            return;
-        }
+
+    
+    let intervalleTimer = null;
+
+    function afficherCorrection(formulaire) {
+        formulaire.dataset.reponseVerrouillee = "true";
 
         const cases = Array.from(formulaire.querySelectorAll(".reponse"));
-        const selection = reponse.closest(".reponse");
-        if (!selection) {
-            return;
-        }
-
-        cases.forEach((caseReponse) => {
-            window.getComputedStyle(caseReponse).backgroundColor;
-        });
-
-        formulaire.dataset.reponseVerrouillee = "true";
 
         cases.forEach((caseReponse) => {
             caseReponse.classList.add(
@@ -817,18 +869,84 @@ foreach ($classementJoueurs as $position => $joueur) {
             );
         });
 
+        formulaire.querySelectorAll('input[type="radio"]').forEach((radio) => {
+            radio.disabled = true;
+        });
+    }
+
+    function lancerTimer() {
+        const affichage = document.getElementById("tempsRestant");
+        const timer = document.getElementById("timer");
+        const barre = document.getElementById("timerBarre");
+        const formulaire = document.getElementById("quizForm");
+
+        if (!affichage || !timer || !barre || !formulaire) {
+            return;
+        }
+
+        let temps = 30;
+
+        timer.style.color = "#5100b9";
+        barre.style.width = "100%";
+        barre.style.backgroundColor = "#5100b9";
+
+        intervalleTimer = window.setInterval(() => {
+            temps--;
+
+            affichage.textContent = temps;
+            barre.style.width = (temps / 30 * 100) + "%";
+
+            if (temps <= 5) {
+                timer.style.color = "#c62828";
+                barre.style.backgroundColor = "#c62828";
+            }
+
+            if (temps <= 0) {
+                window.clearInterval(intervalleTimer);
+                intervalleTimer = null;
+
+                afficherCorrection(formulaire);
+
+                const tempsEcoule = document.createElement("input");
+                tempsEcoule.type = "hidden";
+                tempsEcoule.name = "temps_ecoule";
+                tempsEcoule.value = "1";
+                formulaire.appendChild(tempsEcoule);
+
+                // Envoie le formulaire sans exiger une réponse radio.
+                window.setTimeout(() => formulaire.submit(), 1000);
+            }
+        }, 1000);
+    }
+
+    lancerTimer();
+
+    function verifierReponse(reponse) {
+        const formulaire = reponse.form;
+
+        if (
+            !formulaire ||
+            formulaire.dataset.reponseVerrouillee === "true"
+        ) {
+            return;
+        }
+
+        if (intervalleTimer !== null) {
+            window.clearInterval(intervalleTimer);
+            intervalleTimer = null;
+        }
+
+        afficherCorrection(formulaire);
+
         const valeurReponse = document.createElement("input");
         valeurReponse.type = "hidden";
         valeurReponse.name = "reponse";
         valeurReponse.value = reponse.value;
         formulaire.appendChild(valeurReponse);
 
-        formulaire.querySelectorAll('input[type="radio"]').forEach((caseReponse) => {
-            caseReponse.disabled = true;
-        });
-
-        window.setTimeout(() => formulaire.requestSubmit(), 1000);
+        window.setTimeout(() => formulaire.submit(), 1000);
     }
+
 </script>
 </body>
 </html>
