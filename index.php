@@ -66,11 +66,7 @@
                     <?= htmlspecialchars($username, ENT_QUOTES, 'UTF-8') ?>
                 </p>
 
-                <button
-                    type="button"
-                    onclick="openConnexion()"
-                    class="cursor-pointer text-sm text-blue-600 underline hover:text-blue-800"
-                >
+                <button type="button" onclick="openConnexion()" class="cursor-pointer text-sm text-blue-600 underline hover:text-blue-800">
                     Change user
                 </button>
 
@@ -154,35 +150,10 @@
 
 
     <script>
-        const utilisateurConnecte = <?= $isConnected ? 'true' : 'false' ?>;
-
-        function accederAuQuiz(event, quizId) {
-            if (utilisateurConnecte) {
-                return true;
-            }
-
-            event.preventDefault();
-            openConnexion(quizId);
-            return false;
-        }
-
-        function openConnexion(quizId = '') {
-            const fenetre = document.getElementById('fenetreConnexion');
-
-            // Mémoriser le quiz sélectionné
-            document.getElementById('quiz_id').value = quizId;
-
-            fenetre.classList.remove('hidden');
-            fenetre.classList.add('flex');
-        }
-
-        function closeConnexion() {
-            const fenetre = document.getElementById('fenetreConnexion');
-
-            fenetre.classList.remove('flex');
-            fenetre.classList.add('hidden');
-        }
+        window.utilisateurConnecte = <?= json_encode($isConnected) ?>;
     </script>
+
+    <script src="index.js" defer></script>
 
 </body>
 </html>

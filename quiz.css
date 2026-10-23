@@ -1,0 +1,446 @@
+.timer {
+    width: 100%;
+    max-width: 400px;
+    margin: 20px auto;
+    color: #5100b9;
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.timer.temps-urgent {
+    color: #c62828;
+}
+
+.timer-barre-fond {
+    width: 100%;
+    height: 12px;
+    margin-top: 10px;
+    overflow: hidden;
+    background-color: #d9d9d9;
+    border-radius: 10px;
+}
+
+.timer-barre {
+    width: 100%;
+    height: 100%;
+    background-color: #5100b9;
+    border-radius: 10px;
+    transition: width 1s linear, background-color 0.3s;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.interface {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px;
+    width: min(100%, 370px);
+}
+
+.interface-resultat {
+    width: min(100%, 460px);
+}
+
+.interface-interactive {
+    width: min(100%, 680px);
+    gap: 20px;
+    padding: 24px;
+}
+
+.carte {
+    background: white;
+    border: 1px solid #222;
+    padding: 10px;
+    flex: 1;
+    min-width: 0;
+    min-height: 320px;
+}
+
+.interface-interactive .carte {
+    min-height: 420px;
+    padding: 22px;
+}
+
+.interface-resultat .carte {
+    min-height: 0;
+    width: 100%;
+    padding: 22px;
+}
+
+.interface-resultat .resultat {
+    font-size: 17px;
+}
+
+.interface-interactive h1 {
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+.interface-interactive .progression {
+    font-size: 15px;
+    margin-bottom: 24px;
+}
+
+.interface-interactive .question {
+    font-size: 20px;
+    margin-bottom: 24px;
+}
+
+h1 {
+    color: #5100b9;
+    font-size: 22px;
+    font-weight: normal;
+    margin: 0 0 3px;
+}
+
+.progression {
+    color: #5100b9;
+    font-size: 11px;
+    margin-bottom: 12px;
+}
+
+.question {
+    font-size: 14px;
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+
+.reponses {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.interface-interactive .reponses {
+    gap: 14px;
+}
+
+.reponse {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 41px;
+    padding: 8px 5px;
+    background: #4b00ad;
+    color: white;
+    border: 2px solid #4b00ad;
+    border-radius: 11px;
+    font-size: 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 1s ease, border-color 1s ease;
+}
+
+.interface-interactive .reponse {
+    min-height: 72px;
+    padding: 12px;
+    font-size: 15px;
+}
+
+.reponse:hover {
+    background: #6b20d0;
+}
+
+.reponse:has(input:checked) {
+    background: #7c35d5;
+    border-color: #b18aff;
+}
+
+.reponse-correcte,
+.reponse-correcte:hover,
+.reponse-correcte:has(input:checked) {
+    background: #218838;
+    border-color: #176b2b;
+    color: white;
+}
+
+.reponse-incorrecte,
+.reponse-incorrecte:hover,
+.reponse-incorrecte:has(input:checked) {
+    background: #c62828;
+    border-color: #9f1f1f;
+    color: white;
+}
+
+.reponse-verrouillee {
+    cursor: default;
+}
+
+.reponse input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.navigation {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.fleche {
+    width: 33px;
+    height: 33px;
+    background: #4100f5;
+    border: 1px solid #111;
+    border-radius: 9px;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.interface-interactive .fleche {
+    width: 48px;
+    height: 48px;
+    font-size: 28px;
+}
+
+.fleche:hover {
+    background: #6b39ff;
+}
+
+.fleche:disabled,
+.fleche:disabled:hover {
+    background: #4100f5;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.aide {
+    font-size: 9px;
+    color: #333;
+    text-align: center;
+    max-width: 48px;
+}
+
+.interface-interactive .aide {
+    font-size: 12px;
+    max-width: 64px;
+}
+
+.resultat {
+    color: #111;
+    font-size: 13px;
+}
+
+.resultat-titre {
+    margin: 0 0 7px;
+    color: #6200ee;
+    font-size: 30px;
+    font-weight: normal;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+}
+
+.resultat-progression {
+    margin: 0 0 22px;
+    color: #6200ee;
+    font-size: 15px;
+}
+
+.resultat-resume {
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+.resultat-resume p {
+    margin: 0;
+}
+
+.classement {
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 10px;
+    border-radius: 10px;
+    background: #6200aa;
+}
+
+.classement-ligne {
+    margin: 0 0 7px;
+    padding: 9px 10px;
+    border-radius: 7px;
+    background: #9575cd;
+    color: white;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.classement-ligne:last-child {
+    margin-bottom: 0;
+}
+
+.classement-ligne-vous {
+    background: #7e57c2;
+    font-weight: bold;
+}
+
+.classement-indisponible {
+    margin: 0;
+    color: white;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.bouton-recommencer {
+    background: #4b00ad;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 18px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.bouton-recommencer:hover {
+    background: #35007a;
+}
+
+.resultat-actions {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 14px;
+}
+
+.resultat-actions form,
+.resultat-actions .bouton-menu {
+    flex: 1 1 0;
+}
+
+.resultat-actions form {
+    display: flex;
+}
+
+.bouton-menu {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    padding: 12px 18px;
+    background: #2577d9;
+    color: white;
+    font-size: 15px;
+    text-decoration: none;
+    text-align: center;
+}
+
+.bouton-recommencer {
+    width: 100%;
+}
+
+.bouton-menu:hover {
+    background: #1d5fae;
+}
+
+@media (max-width: 350px) {
+    .interface {
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .interface-interactive {
+        width: 100%;
+    }
+
+    .interface-interactive .carte {
+        min-height: 340px;
+        padding: 12px;
+    }
+
+    .interface-interactive h1 {
+        font-size: 23px;
+    }
+
+    .interface-interactive .question {
+        font-size: 15px;
+    }
+
+    .interface-interactive .reponse {
+        min-height: 52px;
+        padding: 6px;
+        font-size: 11px;
+    }
+
+    .interface-interactive .fleche {
+        width: 40px;
+        height: 40px;
+        font-size: 23px;
+    }
+
+    .interface-resultat {
+        width: 100%;
+    }
+
+    .interface-resultat .carte {
+        padding: 14px;
+    }
+
+    .resultat-titre {
+        font-size: 25px;
+    }
+
+    .resultat-progression {
+        margin-bottom: 16px;
+        font-size: 13px;
+    }
+
+    .interface-resultat .resultat {
+        font-size: 15px;
+    }
+
+    .resultat-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .carte {
+        padding: 8px;
+    }
+
+    h1 {
+        font-size: 19px;
+    }
+}
+
+@media (min-width: 351px) and (max-width: 600px) {
+    .interface-interactive {
+        width: 100%;
+        gap: 12px;
+        padding: 16px;
+    }
+
+    .interface-interactive .carte {
+        min-height: 360px;
+        padding: 16px;
+    }
+
+    .interface-interactive h1 {
+        font-size: 26px;
+    }
+
+    .interface-interactive .question {
+        font-size: 17px;
+    }
+
+    .interface-interactive .reponse {
+        min-height: 58px;
+        padding: 8px;
+        font-size: 13px;
+    }
+}
